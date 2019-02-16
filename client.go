@@ -17,6 +17,7 @@ func NewClient(host, port string) (*Client, error) {
 	c := &Client{
 		conn:      conn,
 		EventChan: make(chan Pair),
+		buf:       make([]byte, 4096),
 	}
 	go c.statLoop()
 	return c, nil
@@ -25,8 +26,7 @@ func NewClient(host, port string) (*Client, error) {
 func (c *Client) statLoop() {
 	log.SetOutput(os.Stderr)
 	for {
-		buf := make([]byte, 4096)
-		n, err := c.conn.Read(buf)
+		n, err := c.conn.Read(c.buf)
 		if err != nil {
 			if err == io.EOF {
 				return
@@ -34,7 +34,7 @@ func (c *Client) statLoop() {
 			log.Printf("Failed to Read into buf: %s\n", err)
 			continue
 		}
-		pairs, err := parseKV(buf[:n])
+		pairs, err := parseKV(c.buf[:n])
 		if err != nil {
 			log.Printf("Failed to parseKV: %s\n", err)
 			continue
@@ -57,6 +57,7 @@ func (c *Client) statLoop() {
 type Client struct {
 	conn      net.Conn
 	EventChan chan Pair
+	buf       []byte
 }
 
 type Pair struct {
