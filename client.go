@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
+	"os"
 )
 
 func NewClient(host, port string) (*Client, error) {
@@ -23,33 +23,26 @@ func NewClient(host, port string) (*Client, error) {
 }
 
 func (c *Client) statLoop() {
+	log.SetOutput(os.Stderr)
 	for {
 		buf := make([]byte, 4096)
 		n, err := c.conn.Read(buf)
-		fmt.Printf("conn.Read %d bytes err: %v\n", n, err)
 		if err != nil {
 			if err == io.EOF {
-				log.Fatalln("EOF on Read, probably sent something bogus to the server.")
+				return
 			}
-			log.Fatalf("Failed to Read into buf: %s\n", err)
-		}
-		if n == 0 {
-			log.Println("Read zero bytes, sleep 100ms and keep going")
-			time.Sleep(time.Millisecond * 100)
+			log.Printf("Failed to Read into buf: %s\n", err)
 			continue
 		}
-		fmt.Printf("Read %d bytes from server -> %s\n", n, string(buf))
 		pairs, err := parseKV(buf[:n])
 		if err != nil {
-			log.Fatalf("Failed to parseKV: %s\n", err)
+			log.Printf("Failed to parseKV: %s\n", err)
+			continue
 		}
 		for _, p := range pairs {
 			key := p.Key
-			val := p.Value
-			fmt.Printf("key: %s value: %s\n", key, val)
 			if key == "alive" {
 				resp := []byte("![k[im alive],v[]]!")
-				fmt.Printf("got %s send %s\n", key, string(resp))
 				_, err = c.conn.Write(resp)
 				if err != nil {
 					log.Printf("Failed to ack alive message: %s\n", err)
@@ -58,7 +51,6 @@ func (c *Client) statLoop() {
 				c.EventChan <- p
 			}
 		}
-		time.Sleep(time.Millisecond * 100)
 	}
 }
 
@@ -77,7 +69,7 @@ func parseKV(buf []byte) ([]Pair, error) {
 	for {
 		kb := bytes.Index(buf, []byte("![k["))
 		if kb == -1 {
-			fmt.Printf("did not find key begin, buf %v, break\n", buf)
+			log.Printf("did not find key begin, buf %s\n", string(buf))
 			break
 		}
 		kb += 4 // skip past ![k[
@@ -95,7 +87,6 @@ func parseKV(buf []byte) ([]Pair, error) {
 		buf = buf[ve+3:]
 		pairs = append(pairs, Pair{key, value})
 		if len(buf) == 0 {
-			fmt.Println("buffer has been emptied of k/v pairs, break")
 			break
 		}
 	}

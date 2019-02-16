@@ -25,7 +25,6 @@ func main() {
 		log.Fatal(err)
 	}
 	for {
-		fmt.Printf("main recv from EventChan\n")
 		event := <-kq.EventChan
 		fmt.Printf("event: %#v\n", event)
 	}
