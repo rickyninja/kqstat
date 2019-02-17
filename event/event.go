@@ -54,19 +54,9 @@ func NewVictory(v string) Victory {
 		log.Printf("value should have at least 2 values: %s", v)
 		return Victory{}
 	}
-	t, err := strconv.Atoi(vals[0])
-	if err != nil {
-		log.Printf("failed Atoi for %s: %s", vals[0], err)
-		return Victory{}
-	}
-	wc, err := strconv.Atoi(vals[1])
-	if err != nil {
-		log.Printf("failed Atoi for %s: %s", vals[1], err)
-		return Victory{}
-	}
 	return Victory{
-		Team: Team(t),
-		Type: WinCondition(wc),
+		Team: Team(vals[0]),
+		Type: WinCondition(vals[1]),
 	}
 }
 
@@ -79,7 +69,7 @@ type WinCondition string
 
 const (
 	Military WinCondition = "military"
-	Econimic              = "econimic"
+	Economic              = "economic"
 	Snail                 = "snail"
 )
 
@@ -310,8 +300,8 @@ const (
 
 func NewGlance(v string) Glance {
 	vals := strings.Split(v, ",")
-	if len(vals) < 4 {
-		log.Printf("value should have at least 4 values: %s", v)
+	if len(vals) < 2 {
+		log.Printf("value should have at least 2 values: %s", v)
 		return Glance{}
 	}
 	att, err := strconv.Atoi(vals[0])
@@ -503,9 +493,9 @@ func NewSnailEat(v string) SnailEat {
 		log.Printf("failed Atoi for %s: %s", vals[1], err)
 		return gos
 	}
-	r, err := strconv.Atoi(vals[1])
+	r, err := strconv.Atoi(vals[2])
 	if err != nil {
-		log.Printf("failed Atoi for %s: %s", vals[1], err)
+		log.Printf("failed Atoi for %s: %s", vals[2], err)
 		return gos
 	}
 	m, err := strconv.Atoi(vals[3])
