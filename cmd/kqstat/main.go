@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 
 	"github.com/rickyninja/kqstat"
 )
@@ -20,7 +21,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	kq, err := kqstat.NewClient(host, port)
+	kq, err := kqstat.NewClient(net.JoinHostPort(host, port))
 	if err != nil {
 		log.Fatal(err)
 	}
