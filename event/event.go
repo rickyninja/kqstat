@@ -1,53 +1,73 @@
+// Package event is focused on deserializing text obtained from the Killerqueen stats service into types representing those events.
 package event
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 )
 
+// Event represents an event returned from the stats service.  You'll probably want to type switch this to get details.
+type Event interface{}
+
+// Bee is a positive integer in the stats text representing one of the 10 player positions.
 type Bee int
 
 const (
-	_ Bee = iota
-	GoldQueen
-	BlueQueen
-	GoldStripes
-	BlueStripes
-	GoldAbs
-	BlueAbs
-	GoldSkulls
-	BlueSkulls
-	GoldChecks
-	BlueChecks
+	_           Bee = iota
+	GoldQueen       // 1
+	BlueQueen       // 2
+	GoldStripes     // 3
+	BlueStripes     // 4
+	GoldAbs         // 5
+	BlueAbs         // 6
+	GoldSkulls      // 7
+	BlueSkulls      // 8
+	GoldChecks      // 9
+	BlueChecks      // 10
 )
 
+// Team is which team an event occurred for.
 type Team string
 
 const (
 	Gold Team = "Gold"
 	Blue      = "Blue"
-	Red       = "Red"
+	// Red team is used in the game's demo, and isn't seen in real games.
+	Red = "Red"
 )
 
+// Buff is a worker getting speed or becoming a warrior.
 type Buff string
 
 const (
+	// Wings is warrior gate usage.
 	Wings Buff = "maiden_wings"
+	// Speed is speed gate usage.
 	Speed Buff = "maiden_speed"
 )
 
+// Map is a game map or level.
 type Map string
 
+// TODO should bonus maps be listed here?
 const (
 	Day   Map = "map_day"
 	Night     = "map_night"
 	Dusk      = "map_dusk"
 )
 
-// event: kqstat.Pair{Key:"victory", Value:"Blue,economic"}
+// CabOrientation indicates which side of each other gold & blue cab are positioned.
+type CabOrientation string
 
+const (
+	BlueOnLeft CabOrientation = "BLUE_ON_LEFT"
+	GoldOnLeft                = "GOLD_ON_LEFT"
+)
+
+// NewVictory creates a Victory type from victory event text.
 func NewVictory(v string) Victory {
 	vals := strings.Split(v, ",")
 	if len(vals) < 2 {
@@ -60,11 +80,15 @@ func NewVictory(v string) Victory {
 	}
 }
 
+// Victory is info on the winning team.
 type Victory struct {
+	// Team is which team won.
 	Team Team
+	// Type is how the game was won.
 	Type WinCondition
 }
 
+// WinCondition is how the game was won.
 type WinCondition string
 
 const (
@@ -73,65 +97,86 @@ const (
 	Snail                 = "snail"
 )
 
-type Axis struct {
-	X int
-	Y int
-}
-
 // event: kqstat.Pair{Key:"playerKill", Value:"638,519,1,6,Worker"}
 // event: kqstat.Pair{Key:"playerKill", Value:"1053,418,2,9,Soldier"}
 // event: kqstat.Pair{Key:"playerKill", Value:"870,275,2,1,Queen"}
 
+// Class is the role a bee is performing in the game.
 type Class string
 
 const (
-	Worker  Class = "Worker"
-	Soldier       = "Soldier"
-	Queen         = "Queen"
+	// Worker is what we refer to as drone.
+	Worker Class = "Worker"
+	// Soldier is what we refer to as warrior.
+	Soldier = "Soldier"
+	// Queen is the queen.
+	Queen = "Queen"
 )
 
-func NewKill(v string) Kill {
+// ![k[alive],v[10:26:03 PM]]!
+// I don't think the value is needed; the reply being used has an empty value.
+
+// Alive is a keepalive event.  The time string in this event doesn't appear to be used for anything,
+// so it's simply stored as is, so it can be seen in log output potentially.
+type Alive struct {
+	Time string
+}
+
+// NewAlive creates an Alive event from alive event text.
+func NewAlive(v string) Alive {
+	return Alive{Time: v}
+}
+
+// NewPlayerKill creates a PlayerKill event from playerkill event text.
+func NewPlayerKill(v string) PlayerKill {
 	vals := strings.Split(v, ",")
 	if len(vals) < 5 {
 		log.Printf("value should have at least 5 values: %s", v)
-		return Kill{}
+		return PlayerKill{}
 	}
 	x, err := strconv.Atoi(vals[0])
 	if err != nil {
 		log.Printf("failed Atoi for %s: %s", vals[0], err)
-		return Kill{}
+		return PlayerKill{}
 	}
 	y, err := strconv.Atoi(vals[1])
 	if err != nil {
 		log.Printf("failed Atoi for %s: %s", vals[1], err)
-		return Kill{}
+		return PlayerKill{}
 	}
 	slayer, err := strconv.Atoi(vals[2])
 	if err != nil {
 		log.Printf("failed Atoi for %s: %s", vals[2], err)
-		return Kill{}
+		return PlayerKill{}
 	}
 	slain, err := strconv.Atoi(vals[3])
 	if err != nil {
 		log.Printf("failed Atoi for %s: %s", vals[3], err)
-		return Kill{}
+		return PlayerKill{}
 	}
 	class := vals[4]
-	return Kill{
-		Pos:        Axis{X: x, Y: y},
+	return PlayerKill{
+		X:          x,
+		Y:          y,
 		Slayer:     Bee(slayer),
 		Slain:      Bee(slain),
 		SlainClass: Class(class),
 	}
 }
 
-type Kill struct {
-	Pos        Axis
-	Slayer     Bee
-	Slain      Bee
+// PlayerKill is a playerkill event.
+type PlayerKill struct {
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Slayer is who did the killing.
+	Slayer Bee
+	// Slain is the target of the killing.
+	Slain Bee
+	// SlainClass is the class or role of the bee that was slain.
 	SlainClass Class
 }
 
+// NewBlessMaiden creates a BlessMaiden event from blessMaiden event text.
 func NewBlessMaiden(v string) BlessMaiden {
 	vals := strings.Split(v, ",")
 	if len(vals) < 3 {
@@ -158,21 +203,21 @@ func NewBlessMaiden(v string) BlessMaiden {
 		t = Red
 	}
 	return BlessMaiden{
-		Pos: Axis{
-			X: x,
-			Y: y,
-		},
+		X:    x,
+		Y:    y,
 		Team: t,
 	}
 }
 
+// BlessMaiden represents a queen tagging a gate.
 type BlessMaiden struct {
-	Pos  Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Team is blue or gold team.
 	Team Team
 }
 
-// event: kqstat.Pair{Key:"reserveMaiden", Value:"410,860,3"}
-
+// NewReserveMaiden creates a ReserveMaiden type from reserveMaiden event text.
 func NewReserveMaiden(v string) ReserveMaiden {
 	vals := strings.Split(v, ",")
 	if len(vals) < 3 {
@@ -195,17 +240,21 @@ func NewReserveMaiden(v string) ReserveMaiden {
 		return ReserveMaiden{}
 	}
 	return ReserveMaiden{
-		Pos: Axis{X: x, Y: y},
+		X:   x,
+		Y:   y,
 		Who: Bee(w),
 	}
 }
 
+// ReserveMaiden represents a worker using a gate to obtain a Buff.
 type ReserveMaiden struct {
-	Pos Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Who is which player is using the gate.
 	Who Bee
 }
 
-// event: kqstat.Pair{Key:"unreserveMaiden", Value:"410,860,,3"}
+// NewUnreserveMaiden create a UnreserveMaiden type from unreserveMaiden event text.
 func NewUnreserveMaiden(v string) UnreserveMaiden {
 	vals := strings.Split(v, ",")
 	if len(vals) < 4 {
@@ -222,24 +271,28 @@ func NewUnreserveMaiden(v string) UnreserveMaiden {
 		log.Printf("failed Atoi for %s: %s", vals[1], err)
 		return UnreserveMaiden{}
 	}
+	// vals[2] seems to always be empty.
 	w, err := strconv.Atoi(vals[3])
 	if err != nil {
 		log.Printf("failed Atoi for %s: %s", vals[3], err)
 		return UnreserveMaiden{}
 	}
 	return UnreserveMaiden{
-		Pos: Axis{X: x, Y: y},
+		X:   x,
+		Y:   y,
 		Who: Bee(w),
 	}
 }
 
+// UnreserveMaiden represents a worker exiting a gate before the Buff is received.
 type UnreserveMaiden struct {
-	Pos Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Who is which player is using the gate.
 	Who Bee
 }
 
-// event: kqstat.Pair{Key:"useMaiden", Value:"960,500,maiden_wings,3"}
-// event: kqstat.Pair{Key:"useMaiden", Value:"340,140,maiden_speed,10"}
+// NewUseMaiden creates a UseMaiden event from useMaiden event text.
 func NewUseMaiden(v string) UseMaiden {
 	um := UseMaiden{}
 	vals := strings.Split(v, ",")
@@ -263,20 +316,25 @@ func NewUseMaiden(v string) UseMaiden {
 		return um
 	}
 	return UseMaiden{
-		Pos:  Axis{X: x, Y: y},
+		X:    x,
+		Y:    y,
 		Buff: Buff(vals[2]),
 		Who:  Bee(w),
 	}
 }
 
+// UseMaiden represents a worker using a gate to obtain a Buff.
 type UseMaiden struct {
-	Pos  Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Buff is the buff the gate provides.
 	Buff Buff
-	Who  Bee
+	// Who is which player is using the gate.
+	Who Bee
 }
 
+// NewPlayerNames creates a PlayerNames event from playernames event text.
 // This is a placeholder for the rfid stuff.
-// event: kqstat.Pair{Key:"playernames", Value:",,,,,,,,,"}
 func NewPlayerNames(v string) PlayerNames {
 	vals := strings.Split(v, ",")
 	if len(vals) != 10 {
@@ -286,18 +344,10 @@ func NewPlayerNames(v string) PlayerNames {
 	return PlayerNames(vals)
 }
 
+// PlayerNames is a list of players in order of their positions on the cabs.
 type PlayerNames []string
 
-type CabOrientation string
-
-// Read keys as LeftRight
-const (
-	BlueOnLeft = "BLUE_ON_LEFT"
-	GoldOnLeft = "GOLD_ON_LEFT"
-)
-
-// event: kqstat.Pair{Key:"glance", Value:"1,10"}
-
+// NewGlance creates a Glance event from glance event text.
 func NewGlance(v string) Glance {
 	vals := strings.Split(v, ",")
 	if len(vals) < 2 {
@@ -320,11 +370,15 @@ func NewGlance(v string) Glance {
 	}
 }
 
+// Glance is an event representing when an attacker bounces off their target instead of delivering a killing blow.
 type Glance struct {
+	// Attacker is intended killer.
 	Attacker Bee
-	Target   Bee
+	// Target is the intended victim.
+	Target Bee
 }
 
+// NewCarryFood creates a CarryFood event from carryFood event text.
 func NewCarryFood(v string) CarryFood {
 	w, err := strconv.Atoi(v)
 	if err != nil {
@@ -333,27 +387,35 @@ func NewCarryFood(v string) CarryFood {
 	return CarryFood{Who: Bee(w)}
 }
 
+// CarryFood is an event representing a worker picking up a berry.
 type CarryFood struct {
+	// Who is the worker picking up a berry.
 	Who Bee
 }
 
-// event: kqstat.Pair{Key:"gamestart", Value:"map_day,False,0,False"}
+// NewGameStart creates a GameStart event from gamestart event text.
 func NewGameStart(v string) GameStart {
 	vals := strings.Split(v, ",")
 	if len(vals) < 4 {
 		log.Printf("value should have at least 4 values: %s", v)
 		return GameStart{}
 	}
-	return GameStart{Map: Map(vals[0])}
+	or := parseOrientation(vals[1])
+	return GameStart{
+		Map:         Map(vals[0]),
+		Orientation: or,
+	}
 }
 
+// GameStart is an event indicating a new game is beginning.
 type GameStart struct {
-	Map         Map
+	// Map is which map the game will be played on.
+	Map Map
+	// Orientation is how the cabs are positioned next to each other.
 	Orientation CabOrientation
 }
 
-// event: kqstat.Pair{Key:"gameend", Value:"map_day,False,88.59263,False"}
-
+// NewGameEnd creates a GameEnd event from gameend event text.
 func NewGameEnd(v string) GameEnd {
 	vals := strings.Split(v, ",")
 	if len(vals) < 4 {
@@ -364,20 +426,25 @@ func NewGameEnd(v string) GameEnd {
 	if err != nil {
 		log.Printf("failed ParseDuration on %s: %s", vals[2], err)
 	}
+	or := parseOrientation(vals[1])
 	return GameEnd{
-		Map:      Map(vals[0]),
-		Duration: dur,
+		Map:         Map(vals[0]),
+		Orientation: or,
+		Duration:    dur,
 	}
 }
 
+// GameEnd is an event representing the end of a game.
 type GameEnd struct {
-	Map         Map
+	// Map is which map the game was played on.
+	Map Map
+	// Orientation is how the cabs are positioned next to each other.
 	Orientation CabOrientation
-	Duration    time.Duration
+	// Duration is how long the game lasted.
+	Duration time.Duration
 }
 
-// event: kqstat.Pair{Key:"spawn", Value:"2,False"}
-
+// NewSpawn creates a Spawn event from spawn event text.
 func NewSpawn(v string) Spawn {
 	vals := strings.Split(v, ",")
 	if len(vals) < 2 {
@@ -400,13 +467,15 @@ func NewSpawn(v string) Spawn {
 	}
 }
 
+// Spawn is an event that represents a player spawning.
 type Spawn struct {
-	Who  Bee
+	// Who is which player is spawning by their position on the sticks.
+	Who Bee
+	// IsAI indicates if this is a player or a robot.
 	IsAI bool
 }
 
-// event: kqstat.Pair{Key:"getOnSnail: ", Value:"621,11,6"}
-
+// NewGetOnSnail creates a GetOnSnail event from getOnSnail event text.
 func NewGetOnSnail(v string) GetOnSnail {
 	gos := GetOnSnail{}
 	vals := strings.Split(v, ",")
@@ -430,17 +499,21 @@ func NewGetOnSnail(v string) GetOnSnail {
 		return gos
 	}
 	return GetOnSnail{
-		Pos: Axis{X: x, Y: y},
+		X:   x,
+		Y:   y,
 		Who: Bee(w),
 	}
 }
 
+// GetOnSnail is an event representing a worker beginning to ride on the snail.
 type GetOnSnail struct {
-	Pos Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Who is which worker is mounting the snail.
 	Who Bee
 }
 
-// event: kqstat.Pair{Key:"getOffSnail: ", Value:"579,11,,8"}
+// NewGetOffSnail creates a GetOffSnail event from getOffSnail event text.
 func NewGetOffSnail(v string) GetOffSnail {
 	gos := GetOffSnail{}
 	vals := strings.Split(v, ",")
@@ -464,18 +537,21 @@ func NewGetOffSnail(v string) GetOffSnail {
 		return gos
 	}
 	return GetOffSnail{
-		Pos: Axis{X: x, Y: y},
+		X:   x,
+		Y:   y,
 		Who: Bee(w),
 	}
 }
 
+// GetOffSnail is an event representing a worker ending a ride on the snail.
 type GetOffSnail struct {
-	Pos Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Who is which worker is dismounting the snail.
 	Who Bee
 }
 
-// event: kqstat.Pair{Key:"snailEat", Value:"163,11,7,6"}
-
+// NewSnailEat creates a SnailEat event from snailEat event text.
 func NewSnailEat(v string) SnailEat {
 	gos := SnailEat{}
 	vals := strings.Split(v, ",")
@@ -504,19 +580,24 @@ func NewSnailEat(v string) SnailEat {
 		return gos
 	}
 	return SnailEat{
-		Pos:   Axis{X: x, Y: y},
+		X:     x,
+		Y:     y,
 		Rider: Bee(r),
 		Meal:  Bee(m),
 	}
 }
 
+// SnailEat is an event representing the snail beginning to eat a worker.
 type SnailEat struct {
-	Pos   Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Rider is which worker is mounted on the snail.
 	Rider Bee
-	Meal  Bee
+	// Meal is which worker is being eaten by the snail.
+	Meal Bee
 }
 
-// 1535414043963 = ![k[snailEscape],v[910,11,4]]!
+// NewSnailEscape creates a SnailEscape event from snailEscape event text.
 func NewSnailEscape(v string) SnailEscape {
 	se := SnailEscape{}
 	vals := strings.Split(v, ",")
@@ -540,16 +621,20 @@ func NewSnailEscape(v string) SnailEscape {
 		return se
 	}
 	return SnailEscape{
-		Pos: Axis{X: x, Y: y},
+		X:   x,
+		Y:   y,
 		Who: Bee(w),
 	}
 }
 
 type SnailEscape struct {
-	Pos Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Who is the worker that escaped the mouth of the snail.
 	Who Bee
 }
 
+// NewBerryDeposit creates a BerryDeposit event from berryDeposit event text.
 func NewBerryDeposit(v string) BerryDeposit {
 	vals := strings.Split(v, ",")
 	if len(vals) < 3 {
@@ -572,17 +657,21 @@ func NewBerryDeposit(v string) BerryDeposit {
 		return BerryDeposit{}
 	}
 	return BerryDeposit{
-		Pos: Axis{X: x, Y: y},
+		X:   x,
+		Y:   y,
 		Who: Bee(w),
 	}
 }
 
+// BerryDeposit is an event representing a worker putting a berry in their hive.
 type BerryDeposit struct {
-	Pos Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Who is which worker deposited the berry.
 	Who Bee
 }
 
-// event: kqstat.Pair{Key:"berryKickIn", Value:"1030,972,7"}
+// NewBerryKickIn creates a BerryKickIn event from berryKickIn event text.
 func NewBerryKickIn(v string) BerryKickIn {
 	bki := BerryKickIn{}
 	vals := strings.Split(v, ",")
@@ -606,12 +695,95 @@ func NewBerryKickIn(v string) BerryKickIn {
 		return bki
 	}
 	return BerryKickIn{
-		Pos: Axis{X: x, Y: y},
+		X:   x,
+		Y:   y,
 		Who: Bee(w),
 	}
 }
 
 type BerryKickIn struct {
-	Pos Axis
+	// X & Y are coordinates where the event occurred.
+	X, Y int
+	// Who is who kicked in the berry.
 	Who Bee
+}
+
+// Parse parses a line of event text from the stats service, and returns it as an event.
+func Parse(line string) (Event, error) {
+	p, err := parseKV(line)
+	if err != nil {
+		return nil, err
+	}
+	switch p.Key {
+	case "alive":
+		return NewAlive(p.Value), nil
+	case "berryDeposit":
+		return NewBerryDeposit(p.Value), nil
+	case "berryKickIn":
+		return NewBerryKickIn(p.Value), nil
+	case "blessMaiden":
+		return NewBlessMaiden(p.Value), nil
+	case "carryFood":
+		return NewCarryFood(p.Value), nil
+	case "gameend":
+		return NewGameEnd(p.Value), nil
+	case "gamestart":
+		return NewGameStart(p.Value), nil
+	case "getOffSnail: ":
+		return NewGetOffSnail(p.Value), nil
+	case "getOnSnail: ":
+		return NewGetOnSnail(p.Value), nil
+	case "glance":
+		return NewGlance(p.Value), nil
+	case "playerKill":
+		return NewPlayerKill(p.Value), nil
+	case "playernames":
+		return NewPlayerNames(p.Value), nil
+	case "reserveMaiden":
+		return NewReserveMaiden(p.Value), nil
+	case "snailEat":
+		return NewSnailEat(p.Value), nil
+	case "snailEscape":
+		return NewSnailEscape(p.Value), nil
+	case "spawn":
+		return NewSpawn(p.Value), nil
+	case "unreserveMaiden":
+		return NewUnreserveMaiden(p.Value), nil
+	case "useMaiden":
+		return NewUseMaiden(p.Value), nil
+	case "victory":
+		return NewVictory(p.Value), nil
+	}
+	return nil, fmt.Errorf("unknown event: %v", p)
+}
+
+// pair is an event after parsing into a key and value.
+type pair struct {
+	Key   string
+	Value string
+}
+
+// parseKV parses an event line into a pair.
+func parseKV(line string) (pair, error) {
+	p := pair{}
+	v := strings.Split(line, "],v[")
+	if len(v) < 2 {
+		return p, fmt.Errorf("Failed to parse line: %s", line)
+	}
+	p.Key = strings.TrimPrefix(v[0], "![k[")
+	p.Value = strings.TrimSuffix(v[1], "\n")
+	p.Value = strings.TrimSuffix(p.Value, "]]!")
+	return p, nil
+}
+
+// parseOrientation sets the CabOrientation based on a boolean value in the event text.
+func parseOrientation(v string) CabOrientation {
+	var or CabOrientation
+	switch v {
+	case "True":
+		or = GoldOnLeft
+	case "False":
+		or = BlueOnLeft
+	}
+	return or
 }

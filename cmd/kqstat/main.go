@@ -21,12 +21,15 @@ func init() {
 
 func main() {
 	flag.Parse()
-	kq, err := kqstat.NewClient(net.JoinHostPort(host, port))
+	cl, err := kqstat.NewClient(net.JoinHostPort(host, port))
 	if err != nil {
 		log.Fatal(err)
 	}
 	for {
-		event := <-kq.EventChan
-		fmt.Printf("event: %#v\n", event)
+		ev, err := cl.GetEvent()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%#v\n", ev)
 	}
 }

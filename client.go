@@ -1,102 +1,81 @@
+// Package kqstat is used to connect to a Killerqueen stats service, and read events as they occur.
 package kqstat
 
 import (
-	"bytes"
-	"fmt"
-	"io"
 	"log"
-	"net"
-	"os"
+	"net/url"
+	"sync"
+
+	"github.com/gorilla/websocket"
+	"github.com/rickyninja/kqstat/event"
 )
 
+// aliveResp is the response sent back to the stats service during a keep alive event.
+const aliveResp = "![k[im alive],v[]]!"
+
+// Client is a connection to a stats service.
+type Client struct {
+	*websocket.Conn
+	wmutex *sync.Mutex
+	rmutex *sync.Mutex
+}
+
+// NewClient connects to a stats service, and returns a *Client.
 func NewClient(addr string) (*Client, error) {
-	conn, err := net.Dial("tcp", addr)
+	u := url.URL{Scheme: "ws", Host: addr}
+	ws, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 	c := &Client{
-		conn:      conn,
-		EventChan: make(chan Pair),
-		buf:       make([]byte, 4096),
+		Conn:   ws,
+		wmutex: new(sync.Mutex),
+		rmutex: new(sync.Mutex),
 	}
-	go c.statLoop()
 	return c, nil
 }
 
-func (c *Client) statLoop() {
-	log.SetOutput(os.Stderr)
-	for {
-		//fmt.Printf("at conn.Read len %d buf %s\n\n", len(c.buf), c.buf)
-		n, err := c.conn.Read(c.buf)
-		if err != nil {
-			if err == io.EOF {
-				return
-			}
-			log.Printf("Failed to Read into buf: %s\n", err)
-			continue
-		}
-		//fmt.Printf("post conn.Read len %d buf %s\n\n", len(c.buf), c.buf)
-		//fmt.Printf("buf passed to parseKV %s\n\n", c.buf[:n])
-		pairs, err := parseKV(c.buf[:n])
-		if err != nil {
-			log.Printf("Failed to parseKV: %s\n", err)
-			continue
-		}
-		for _, p := range pairs {
-			key := p.Key
-			if key == "alive" {
-				resp := []byte("![k[im alive],v[]]!")
-				_, err = c.conn.Write(resp)
-				if err != nil {
-					log.Printf("Failed to ack alive message: %s\n", err)
-				}
-			} else {
-				c.EventChan <- p
-			}
-		}
+// ReadMessage wraps websocket.Conn.ReadMessage with a mutex.
+func (c *Client) ReadMessage() (int, []byte, error) {
+	c.rmutex.Lock()
+	defer c.rmutex.Unlock()
+	return c.Conn.ReadMessage()
+}
+
+// WriteMessage wraps websocket.Conn.WriteMessage with a mutex.
+func (c *Client) WriteMessage(messageType int, data []byte) error {
+	c.wmutex.Lock()
+	defer c.wmutex.Unlock()
+	return c.Conn.WriteMessage(messageType, data)
+}
+
+// GetEvent returns the next event from the stats service.
+func (c *Client) GetEvent() (event.Event, error) {
+	_, message, err := c.ReadMessage()
+	if err != nil {
+		return nil, err
 	}
-}
-
-type Client struct {
-	conn      net.Conn
-	EventChan chan Pair
-	buf       []byte
-}
-
-type Pair struct {
-	Key   string
-	Value string
-}
-
-func parseKV(buf []byte) ([]Pair, error) {
-	pairs := make([]Pair, 0)
-	for {
-		fmt.Printf("buf: %s\n\n", string(buf))
-		fmt.Printf("buf len: %d\n", len(buf))
-		kb := bytes.Index(buf, []byte("![k["))
-		if kb == -1 {
-			return nil, fmt.Errorf("did not find key begin, buf %s\n", string(buf))
-		}
-		kb += 4 // skip past ![k[
-		ke := bytes.Index(buf, []byte("],v["))
-		if ke == -1 {
-			return nil, fmt.Errorf("Failed to find end of key: %s\n", string(buf))
-		}
-		vb := ke + 4 // skip past ],v[
-		ve := bytes.Index(buf, []byte("]]!"))
-		if ve == -1 {
-			return nil, fmt.Errorf("Failed to find end of value: %s\n", string(buf))
-		}
-		fmt.Printf("buf kb: %d ke %d\n", kb, ke)
-		fmt.Printf("buf vb: %d ve %d\n", vb, ve)
-		key := string(buf[kb:ke])
-		value := string(buf[vb:ve])
-		buf = buf[ve+3:]
-		//fmt.Printf("remaining buf: %s\n", string(buf))
-		pairs = append(pairs, Pair{key, value})
-		if len(buf) == 0 {
-			break
-		}
+	ev, err := event.Parse(string(message))
+	if err != nil {
+		return ev, err
 	}
-	return pairs, nil
+	// Auto reply to keep alives as a convenience, while still allowing the caller to see the event.
+	if _, ok := ev.(event.Alive); ok {
+		go func() {
+			err := c.WriteMessage(websocket.TextMessage, []byte(aliveResp))
+			if err != nil {
+				log.Println(err)
+			}
+		}()
+	}
+	return ev, nil
+}
+
+// Close does a graceful close of the websocket connection.
+func (c *Client) Close() error {
+	err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	if err != nil {
+		return err
+	}
+	return nil
 }
