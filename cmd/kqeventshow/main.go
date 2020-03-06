@@ -10,19 +10,16 @@ import (
 	"github.com/rickyninja/kqstat"
 )
 
-var (
-	port string
-	host string
-)
-
-func init() {
-	flag.StringVar(&port, "port", "12749", "Killerqueen stats service port")
-	flag.StringVar(&host, "host", "localhost", "Killerqueen stats service host")
-}
-
 func main() {
 	logger := newMylog(log.New(os.Stderr, "", 0))
+	var (
+		port string
+		host string
+	)
+	flag.StringVar(&port, "port", "12749", "Killerqueen stats service port")
+	flag.StringVar(&host, "host", "localhost", "Killerqueen stats service host")
 	flag.Parse()
+
 	cl, err := kqstat.NewClient(net.JoinHostPort(host, port), logger)
 	if err != nil {
 		log.Fatal(err)
