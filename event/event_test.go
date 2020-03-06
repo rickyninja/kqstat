@@ -7,6 +7,7 @@ import (
 )
 
 func TestParseKV(t *testing.T) {
+	t.Parallel()
 	line := "![k[alive],v[10:26:03 PM]]!\n"
 	want := pair{
 		Key:   "alive",
@@ -25,6 +26,7 @@ func TestParseKV(t *testing.T) {
 }
 
 func TestParseEvent(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		line string
 		want Event
@@ -51,111 +53,116 @@ func TestParseEvent(t *testing.T) {
 		{"![k[victory],v[Gold,military]]!", Victory{Team: Gold, Type: Military}},
 	}
 	for _, tc := range tests {
-		ev, err := Parse(tc.line)
-		if err != nil {
-			t.Fatal(err)
-		}
-		switch want := tc.want.(type) {
-		case Alive:
-			got := ev.(Alive)
-			if got != want {
-				t.Errorf("wrong Alive got %#v want %#v", got, want)
+		tc := tc
+		t.Run(tc.line, func(t *testing.T) {
+			t.Parallel()
+			ev, err := Parse(tc.line)
+			if err != nil {
+				t.Fatal(err)
 			}
-		case BerryDeposit:
-			got := ev.(BerryDeposit)
-			if got != want {
-				t.Errorf("wrong BerryDeposit got %#v want %#v", got, want)
+			switch want := tc.want.(type) {
+			case Alive:
+				got := ev.(Alive)
+				if got != want {
+					t.Errorf("wrong Alive got %#v want %#v", got, want)
+				}
+			case BerryDeposit:
+				got := ev.(BerryDeposit)
+				if got != want {
+					t.Errorf("wrong BerryDeposit got %#v want %#v", got, want)
+				}
+			case BerryKickIn:
+				got := ev.(BerryKickIn)
+				if got != want {
+					t.Errorf("wrong BerryKickIn got %#v want %#v", got, want)
+				}
+			case BlessMaiden:
+				got := ev.(BlessMaiden)
+				if got != want {
+					t.Errorf("wrong BlessMaiden got %#v want %#v", got, want)
+				}
+			case CarryFood:
+				got := ev.(CarryFood)
+				if got != want {
+					t.Errorf("wrong CarryFood got %#v want %#v", got, want)
+				}
+			case GameEnd:
+				got := ev.(GameEnd)
+				if got != want {
+					t.Errorf("wrong GameEnd got %#v want %#v", got, want)
+				}
+			case GameStart:
+				got := ev.(GameStart)
+				if got != want {
+					t.Errorf("wrong GameStart got %#v want %#v", got, want)
+				}
+			case GetOffSnail:
+				got := ev.(GetOffSnail)
+				if got != want {
+					t.Errorf("wrong GetOffSnail got %#v want %#v", got, want)
+				}
+			case GetOnSnail:
+				got := ev.(GetOnSnail)
+				if got != want {
+					t.Errorf("wrong GetOnSnail got %#v want %#v", got, want)
+				}
+			case Glance:
+				got := ev.(Glance)
+				if got != want {
+					t.Errorf("wrong Glance got %#v want %#v", got, want)
+				}
+			case PlayerKill:
+				got := ev.(PlayerKill)
+				if got != want {
+					t.Errorf("wrong PlayerKill got %#v want %#v", got, want)
+				}
+			case PlayerNames:
+				got := ev.(PlayerNames)
+				if !reflect.DeepEqual(got, want) {
+					t.Errorf("wrong PlayerNames got %#v want %#v", got, want)
+				}
+			case ReserveMaiden:
+				got := ev.(ReserveMaiden)
+				if got != want {
+					t.Errorf("wrong ReserveMaiden got %#v want %#v", got, want)
+				}
+			case SnailEat:
+				got := ev.(SnailEat)
+				if got != want {
+					t.Errorf("wrong SnailEat got %#v want %#v", got, want)
+				}
+			case SnailEscape:
+				got := ev.(SnailEscape)
+				if got != want {
+					t.Errorf("wrong SnailEscape got %#v want %#v", got, want)
+				}
+			case Spawn:
+				got := ev.(Spawn)
+				if got != want {
+					t.Errorf("wrong Spawn got %#v want %#v", got, want)
+				}
+			case UnreserveMaiden:
+				got := ev.(UnreserveMaiden)
+				if got != want {
+					t.Errorf("wrong UnreserveMaiden got %#v want %#v", got, want)
+				}
+			case UseMaiden:
+				got := ev.(UseMaiden)
+				if got != want {
+					t.Errorf("wrong UseMaiden got %#v want %#v", got, want)
+				}
+			case Victory:
+				got := ev.(Victory)
+				if got != want {
+					t.Errorf("wrong Victory got %#v want %#v", got, want)
+				}
 			}
-		case BerryKickIn:
-			got := ev.(BerryKickIn)
-			if got != want {
-				t.Errorf("wrong BerryKickIn got %#v want %#v", got, want)
-			}
-		case BlessMaiden:
-			got := ev.(BlessMaiden)
-			if got != want {
-				t.Errorf("wrong BlessMaiden got %#v want %#v", got, want)
-			}
-		case CarryFood:
-			got := ev.(CarryFood)
-			if got != want {
-				t.Errorf("wrong CarryFood got %#v want %#v", got, want)
-			}
-		case GameEnd:
-			got := ev.(GameEnd)
-			if got != want {
-				t.Errorf("wrong GameEnd got %#v want %#v", got, want)
-			}
-		case GameStart:
-			got := ev.(GameStart)
-			if got != want {
-				t.Errorf("wrong GameStart got %#v want %#v", got, want)
-			}
-		case GetOffSnail:
-			got := ev.(GetOffSnail)
-			if got != want {
-				t.Errorf("wrong GetOffSnail got %#v want %#v", got, want)
-			}
-		case GetOnSnail:
-			got := ev.(GetOnSnail)
-			if got != want {
-				t.Errorf("wrong GetOnSnail got %#v want %#v", got, want)
-			}
-		case Glance:
-			got := ev.(Glance)
-			if got != want {
-				t.Errorf("wrong Glance got %#v want %#v", got, want)
-			}
-		case PlayerKill:
-			got := ev.(PlayerKill)
-			if got != want {
-				t.Errorf("wrong PlayerKill got %#v want %#v", got, want)
-			}
-		case PlayerNames:
-			got := ev.(PlayerNames)
-			if !reflect.DeepEqual(got, want) {
-				t.Errorf("wrong PlayerNames got %#v want %#v", got, want)
-			}
-		case ReserveMaiden:
-			got := ev.(ReserveMaiden)
-			if got != want {
-				t.Errorf("wrong ReserveMaiden got %#v want %#v", got, want)
-			}
-		case SnailEat:
-			got := ev.(SnailEat)
-			if got != want {
-				t.Errorf("wrong SnailEat got %#v want %#v", got, want)
-			}
-		case SnailEscape:
-			got := ev.(SnailEscape)
-			if got != want {
-				t.Errorf("wrong SnailEscape got %#v want %#v", got, want)
-			}
-		case Spawn:
-			got := ev.(Spawn)
-			if got != want {
-				t.Errorf("wrong Spawn got %#v want %#v", got, want)
-			}
-		case UnreserveMaiden:
-			got := ev.(UnreserveMaiden)
-			if got != want {
-				t.Errorf("wrong UnreserveMaiden got %#v want %#v", got, want)
-			}
-		case UseMaiden:
-			got := ev.(UseMaiden)
-			if got != want {
-				t.Errorf("wrong UseMaiden got %#v want %#v", got, want)
-			}
-		case Victory:
-			got := ev.(Victory)
-			if got != want {
-				t.Errorf("wrong Victory got %#v want %#v", got, want)
-			}
-		}
+		})
 	}
 }
 
 func TestNewVictory(t *testing.T) {
+	t.Parallel()
 	v := NewVictory("Blue,economic")
 	if v.Team != Blue {
 		t.Errorf("wrong team, got %s want %s", v.Team, Blue)
@@ -166,6 +173,7 @@ func TestNewVictory(t *testing.T) {
 }
 
 func TestNewAlive(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		value string
 		want  Alive
@@ -173,15 +181,20 @@ func TestNewAlive(t *testing.T) {
 		{"10:26:03 PM", Alive{Time: "10:26:03 PM"}},
 	}
 	for _, tc := range cases {
-		want := tc.want
-		got := NewAlive(tc.value)
-		if got.Time != want.Time {
-			t.Errorf("wrong Time, got %s want %s", got.Time, want.Time)
-		}
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			t.Parallel()
+			want := tc.want
+			got := NewAlive(tc.value)
+			if got.Time != want.Time {
+				t.Errorf("wrong Time, got %s want %s", got.Time, want.Time)
+			}
+		})
 	}
 }
 
 func TestNewKill(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		value string
 		want  PlayerKill
@@ -206,27 +219,32 @@ func TestNewKill(t *testing.T) {
 		}},
 	}
 	for _, tc := range cases {
-		want := tc.want
-		got := NewPlayerKill(tc.value)
-		if got.X != want.X {
-			t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
-		}
-		if got.Y != want.Y {
-			t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
-		}
-		if got.Slayer != want.Slayer {
-			t.Errorf("wrong Slayer, got %d want %d", got.Slayer, want.Slayer)
-		}
-		if got.Slain != want.Slain {
-			t.Errorf("wrong Slain, got %d want %d", got.Slain, want.Slain)
-		}
-		if got.SlainClass != want.SlainClass {
-			t.Errorf("wrong SlainClass, got %s want %s", got.SlainClass, want.SlainClass)
-		}
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			t.Parallel()
+			want := tc.want
+			got := NewPlayerKill(tc.value)
+			if got.X != want.X {
+				t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
+			}
+			if got.Y != want.Y {
+				t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
+			}
+			if got.Slayer != want.Slayer {
+				t.Errorf("wrong Slayer, got %d want %d", got.Slayer, want.Slayer)
+			}
+			if got.Slain != want.Slain {
+				t.Errorf("wrong Slain, got %d want %d", got.Slain, want.Slain)
+			}
+			if got.SlainClass != want.SlainClass {
+				t.Errorf("wrong SlainClass, got %s want %s", got.SlainClass, want.SlainClass)
+			}
+		})
 	}
 }
 
 func TestNewBlessMaiden(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		value string
 		want  BlessMaiden
@@ -245,21 +263,26 @@ func TestNewBlessMaiden(t *testing.T) {
 		}},
 	}
 	for _, tc := range cases {
-		want := tc.want
-		got := NewBlessMaiden(tc.value)
-		if got.X != want.X {
-			t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
-		}
-		if got.Y != want.Y {
-			t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
-		}
-		if got.Team != want.Team {
-			t.Errorf("wrong Team, got %s want %s", got.Team, want.Team)
-		}
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			t.Parallel()
+			want := tc.want
+			got := NewBlessMaiden(tc.value)
+			if got.X != want.X {
+				t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
+			}
+			if got.Y != want.Y {
+				t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
+			}
+			if got.Team != want.Team {
+				t.Errorf("wrong Team, got %s want %s", got.Team, want.Team)
+			}
+		})
 	}
 }
 
 func TestNewReserveMaiden(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		value string
 		want  ReserveMaiden
@@ -270,22 +293,27 @@ func TestNewReserveMaiden(t *testing.T) {
 		}},
 	}
 	for _, tc := range cases {
-		want := tc.want
-		got := NewReserveMaiden(tc.value)
-		if got.X != want.X {
-			t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
-		}
-		// ndf.@j
-		if got.Y != want.Y {
-			t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
-		}
-		if got.Who != want.Who {
-			t.Errorf("wrong Who, got %d want %d", got.Who, want.Who)
-		}
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			t.Parallel()
+			want := tc.want
+			got := NewReserveMaiden(tc.value)
+			if got.X != want.X {
+				t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
+			}
+			// ndf.@j
+			if got.Y != want.Y {
+				t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
+			}
+			if got.Who != want.Who {
+				t.Errorf("wrong Who, got %d want %d", got.Who, want.Who)
+			}
+		})
 	}
 }
 
 func TestNewUnreserveMaiden(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		value string
 		want  UnreserveMaiden
@@ -296,21 +324,26 @@ func TestNewUnreserveMaiden(t *testing.T) {
 		}},
 	}
 	for _, tc := range cases {
-		want := tc.want
-		got := NewUnreserveMaiden(tc.value)
-		if got.X != want.X {
-			t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
-		}
-		if got.Y != want.Y {
-			t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
-		}
-		if got.Who != want.Who {
-			t.Errorf("wrong Who, got %d want %d", got.Who, want.Who)
-		}
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			t.Parallel()
+			want := tc.want
+			got := NewUnreserveMaiden(tc.value)
+			if got.X != want.X {
+				t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
+			}
+			if got.Y != want.Y {
+				t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
+			}
+			if got.Who != want.Who {
+				t.Errorf("wrong Who, got %d want %d", got.Who, want.Who)
+			}
+		})
 	}
 }
 
 func TestNewUseMaiden(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		value string
 		want  UseMaiden
@@ -327,24 +360,29 @@ func TestNewUseMaiden(t *testing.T) {
 		}},
 	}
 	for _, tc := range cases {
-		want := tc.want
-		got := NewUseMaiden(tc.value)
-		if got.X != want.X {
-			t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
-		}
-		if got.Y != want.Y {
-			t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
-		}
-		if got.Buff != want.Buff {
-			t.Errorf("wrong Buff, got %s want %s", got.Buff, want.Buff)
-		}
-		if got.Who != want.Who {
-			t.Errorf("wrong Who, got %d want %d", got.Who, want.Who)
-		}
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			t.Parallel()
+			want := tc.want
+			got := NewUseMaiden(tc.value)
+			if got.X != want.X {
+				t.Errorf("wrong X axis, got %d want %d", got.X, want.X)
+			}
+			if got.Y != want.Y {
+				t.Errorf("wrong Y axis, got %d want %d", got.Y, want.Y)
+			}
+			if got.Buff != want.Buff {
+				t.Errorf("wrong Buff, got %s want %s", got.Buff, want.Buff)
+			}
+			if got.Who != want.Who {
+				t.Errorf("wrong Who, got %d want %d", got.Who, want.Who)
+			}
+		})
 	}
 }
 
 func TestNewPlayerNames(t *testing.T) {
+	t.Parallel()
 	want := []string{"Kim", "Kia", "Tyler M.", "Tyler D.", "Sam W.", "Sam G.", "Logan", "Liz", "Max", "San"}
 	got := NewPlayerNames("Kim,Kia,Tyler M.,Tyler D.,Sam W.,Sam G.,Logan,Liz,Max,San")
 	if len(got) != len(want) {
@@ -360,6 +398,7 @@ func TestNewPlayerNames(t *testing.T) {
 }
 
 func TestNewGlance(t *testing.T) {
+	t.Parallel()
 	got := NewGlance("1,10")
 	want := Glance{Attacker: GoldQueen, Target: BlueChecks}
 	if got.Attacker != want.Attacker {
@@ -371,6 +410,7 @@ func TestNewGlance(t *testing.T) {
 }
 
 func TestNewCarryFood(t *testing.T) {
+	t.Parallel()
 	got := NewCarryFood("5")
 	want := CarryFood{Who: GoldAbs}
 	if got != want {
@@ -379,6 +419,7 @@ func TestNewCarryFood(t *testing.T) {
 }
 
 func TestNewGameStart(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		value string
 		want  GameStart
@@ -394,15 +435,20 @@ func TestNewGameStart(t *testing.T) {
 		}},
 	}
 	for _, tc := range cases {
-		want := tc.want
-		got := NewGameStart(tc.value)
-		if got.Map != want.Map {
-			t.Errorf("wrong Map, got %s want %s", got.Map, want.Map)
-		}
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			t.Parallel()
+			want := tc.want
+			got := NewGameStart(tc.value)
+			if got.Map != want.Map {
+				t.Errorf("wrong Map, got %s want %s", got.Map, want.Map)
+			}
+		})
 	}
 }
 
 func TestNewGameEnd(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		value string
 		want  GameEnd
@@ -421,18 +467,23 @@ func TestNewGameEnd(t *testing.T) {
 		}},
 	}
 	for _, tc := range cases {
-		want := tc.want
-		got := NewGameEnd(tc.value)
-		if got.Map != want.Map {
-			t.Errorf("wrong Map, got %s want %s", got.Map, want.Map)
-		}
-		if got.Duration != want.Duration {
-			t.Errorf("wrong Duration, got %s want %s", got.Duration, want.Duration)
-		}
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			t.Parallel()
+			want := tc.want
+			got := NewGameEnd(tc.value)
+			if got.Map != want.Map {
+				t.Errorf("wrong Map, got %s want %s", got.Map, want.Map)
+			}
+			if got.Duration != want.Duration {
+				t.Errorf("wrong Duration, got %s want %s", got.Duration, want.Duration)
+			}
+		})
 	}
 }
 
 func TestNewSpawn(t *testing.T) {
+	t.Parallel()
 	got := NewSpawn("2,False")
 	want := Spawn{Who: BlueQueen, IsAI: false}
 	if got.Who != want.Who {
@@ -444,6 +495,7 @@ func TestNewSpawn(t *testing.T) {
 }
 
 func TestNewGetOnSnail(t *testing.T) {
+	t.Parallel()
 	got := NewGetOnSnail("621,11,6")
 	want := GetOnSnail{X: 621, Y: 11, Who: BlueAbs}
 	if got.X != want.X {
@@ -458,6 +510,7 @@ func TestNewGetOnSnail(t *testing.T) {
 }
 
 func TestNewGetOffSnail(t *testing.T) {
+	t.Parallel()
 	got := NewGetOffSnail("579,11,,8")
 	want := GetOffSnail{X: 579, Y: 11, Who: BlueSkulls}
 	if got.X != want.X {
@@ -472,6 +525,7 @@ func TestNewGetOffSnail(t *testing.T) {
 }
 
 func TestNewSnailEat(t *testing.T) {
+	t.Parallel()
 	got := NewSnailEat("163,11,7,6")
 	want := SnailEat{X: 163, Y: 11, Rider: Bee(7), Meal: Bee(6)}
 	if got.X != want.X {
@@ -489,6 +543,7 @@ func TestNewSnailEat(t *testing.T) {
 }
 
 func TestNewSnailEscape(t *testing.T) {
+	t.Parallel()
 	got := NewSnailEscape("910,11,4")
 	want := SnailEscape{X: 910, Y: 11, Who: Bee(4)}
 	if got.X != want.X {
@@ -503,6 +558,7 @@ func TestNewSnailEscape(t *testing.T) {
 }
 
 func TestNewBerryDeposit(t *testing.T) {
+	t.Parallel()
 	got := NewBerryDeposit("1745,139,6")
 	want := BerryDeposit{X: 1745, Y: 139, Who: Bee(6)}
 	if got.X != want.X {
@@ -517,6 +573,7 @@ func TestNewBerryDeposit(t *testing.T) {
 }
 
 func TestNewBerryKickIn(t *testing.T) {
+	t.Parallel()
 	got := NewBerryKickIn("1030,972,7")
 	want := BerryKickIn{X: 1030, Y: 972, Who: Bee(7)}
 	if got.X != want.X {

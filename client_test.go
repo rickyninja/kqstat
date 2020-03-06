@@ -12,6 +12,7 @@ import (
 )
 
 func TestReplay_PastEOF(t *testing.T) {
+	t.Parallel()
 	r := strings.NewReader(`![k[playernames],v[alpha,beta,gamma,delta,epsilon,zêta,êta,thêta,iota,kappa]]!
 ![k[spawn],v[10,False]]!
 ![k[playerKill],v[1190,860,8,5,Worker]]!
