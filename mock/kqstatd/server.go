@@ -1,3 +1,4 @@
+// Package kqstatd is a mock Killerqueen stats service.
 package kqstatd
 
 import (

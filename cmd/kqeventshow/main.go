@@ -1,3 +1,4 @@
+// kqeventshow connects to a Killerqueen stats service, and prints recieved events.
 package main
 
 import (
