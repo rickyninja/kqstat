@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 
 	"github.com/rickyninja/kqstat"
 )
@@ -20,8 +21,9 @@ func init() {
 }
 
 func main() {
+	logger := newMylog(log.New(os.Stderr, "", 0))
 	flag.Parse()
-	cl, err := kqstat.NewClient(net.JoinHostPort(host, port))
+	cl, err := kqstat.NewClient(net.JoinHostPort(host, port), logger)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,4 +34,16 @@ func main() {
 		}
 		fmt.Printf("%#v\n", ev)
 	}
+}
+
+type mylog struct {
+	*log.Logger
+}
+
+func newMylog(l *log.Logger) *mylog {
+	return &mylog{l}
+}
+
+func (l *mylog) Logf(format string, a ...interface{}) {
+	l.Printf(format, a...)
 }

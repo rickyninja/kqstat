@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -14,19 +13,25 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type Logger interface {
+	Logf(format string, a ...interface{})
+}
+
 // Replay replays stats from an io.Reader on repeat.
 type Replay struct {
 	buffer []byte
+	log    Logger
 }
 
 // NewReplay constructs a *Replay object using an io.Reader as its input source.
-func NewReplay(r io.Reader) (*Replay, error) {
+func NewReplay(r io.Reader, l Logger) (*Replay, error) {
 	buf, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 	re := &Replay{
 		buffer: buf,
+		log:    l,
 	}
 	return re, nil
 }
@@ -36,10 +41,10 @@ func (r *Replay) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var upgrader = websocket.Upgrader{} // use default options
 	ws, err := upgrader.Upgrade(rw, req, nil)
 	if err != nil {
-		log.Print("upgrade:", err)
+		r.log.Logf("websocket Upgrade: %s", err)
 		return
 	}
-	con := newConn(ws)
+	con := newConn(ws, r.log)
 	defer con.Close()
 	done := make(chan struct{})
 	defer func() { done <- struct{}{} }()
@@ -58,13 +63,13 @@ func (r *Replay) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 						continue
 					}
 				} else {
-					log.Println(err)
+					r.log.Logf("%s", err)
 					return
 				}
 			}
 			err = con.WriteMessage(websocket.TextMessage, line)
 			if err != nil {
-				log.Println("write: ", err)
+				r.log.Logf("websocket WriteMessage: %s", err)
 				return
 			}
 		}
@@ -76,7 +81,7 @@ func (r *Replay) getReader() *bufio.Reader {
 	cp := make([]byte, len(r.buffer))
 	n := copy(cp, r.buffer)
 	if n < len(r.buffer) {
-		log.Printf("Failed to copy buffer: got %d want %d\n", n, len(r.buffer))
+		r.log.Logf("Failed to copy buffer: got %d want %d\n", n, len(r.buffer))
 	}
 	return bufio.NewReader(bytes.NewBuffer(cp))
 }
@@ -87,15 +92,17 @@ type conn struct {
 	failedKeepAlive chan struct{}
 	wmutex          *sync.Mutex
 	rmutex          *sync.Mutex
+	log             Logger
 }
 
 // newConn creates a *conn from a websocket.
-func newConn(ws *websocket.Conn) *conn {
+func newConn(ws *websocket.Conn, l Logger) *conn {
 	return &conn{
 		Conn:            ws,
 		failedKeepAlive: make(chan struct{}),
 		wmutex:          new(sync.Mutex),
 		rmutex:          new(sync.Mutex),
+		log:             l,
 	}
 }
 
@@ -124,16 +131,16 @@ func (c *conn) doKeepAlives(done <-chan struct{}) {
 		case <-ticker.C:
 			err := c.sendKeepAlive()
 			if err != nil {
-				log.Println("sendKeepAlive: ", err)
+				c.log.Logf("sendKeepAlive: %s", err)
 				return
 			}
 			_, message, err := c.ReadMessage()
 			if err != nil {
-				log.Println("ReadMessage: ", err)
+				c.log.Logf("ReadMessage: %s", err)
 				return
 			}
 			if !bytes.Equal(message, []byte(keepAliveMsg)) {
-				log.Println("Did not receive expected keep alive response, closing connection.")
+				c.log.Logf("Did not receive expected keep alive response, closing connection.")
 				c.failedKeepAlive <- struct{}{}
 			}
 		}

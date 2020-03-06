@@ -2,7 +2,6 @@
 package kqstat
 
 import (
-	"log"
 	"net/url"
 	"sync"
 
@@ -13,15 +12,20 @@ import (
 // aliveResp is the response sent back to the stats service during a keep alive event.
 const aliveResp = "![k[im alive],v[]]!"
 
+type Logger interface {
+	Logf(format string, a ...interface{})
+}
+
 // Client is a connection to a stats service.
 type Client struct {
 	*websocket.Conn
 	wmutex *sync.Mutex
 	rmutex *sync.Mutex
+	log    Logger
 }
 
 // NewClient connects to a stats service, and returns a *Client.
-func NewClient(addr string) (*Client, error) {
+func NewClient(addr string, l Logger) (*Client, error) {
 	u := url.URL{Scheme: "ws", Host: addr}
 	ws, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -31,6 +35,7 @@ func NewClient(addr string) (*Client, error) {
 		Conn:   ws,
 		wmutex: new(sync.Mutex),
 		rmutex: new(sync.Mutex),
+		log:    l,
 	}
 	return c, nil
 }
@@ -64,7 +69,7 @@ func (c *Client) GetEvent() (event.Event, error) {
 		go func() {
 			err := c.WriteMessage(websocket.TextMessage, []byte(aliveResp))
 			if err != nil {
-				log.Println(err)
+				c.log.Logf("%s", err)
 			}
 		}()
 	}

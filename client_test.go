@@ -48,7 +48,7 @@ func TestReplay_PastEOF(t *testing.T) {
 
 func clientServer(t *testing.T, r io.Reader) (*Client, *kqstatd.Replay) {
 	t.Helper()
-	replay, err := kqstatd.NewReplay(r)
+	replay, err := kqstatd.NewReplay(r, t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func clientServer(t *testing.T, r io.Reader) (*Client, *kqstatd.Replay) {
 	defer l.Close()
 	//t.Logf("listener address: %s", l.Addr())
 	go http.Serve(l, replay)
-	cl, err := NewClient(l.Addr().String())
+	cl, err := NewClient(l.Addr().String(), t)
 	if err != nil {
 		t.Fatal(err)
 	}
