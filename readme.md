@@ -1,4 +1,4 @@
-# Go library for streaming Killerqueen tournament stats
+# Go client library for Killerqueen gameplay stats
 
-API not stable at this point.  Only thing it will do right now is connect and print stats
-as they are received.
+- [Client](https://godoc.org/github.com/rickyninja/kqstat) docs
+- [Replay](https://godoc.org/github.com/rickyninja/kqstat/mock/kqstatd) mock service
