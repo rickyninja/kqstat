@@ -15,6 +15,32 @@ type Event interface{}
 // Bee is a positive integer in the stats text representing one of the 10 player positions.
 type Bee int
 
+func (b Bee) String() string {
+	switch b {
+	case GoldQueen:
+		return "gold-queen"
+	case BlueQueen:
+		return "blue-queen"
+	case GoldStripes:
+		return "gold-stripes"
+	case BlueStripes:
+		return "blue-stripes"
+	case GoldAbs:
+		return "gold-abs"
+	case BlueAbs:
+		return "blue-abs"
+	case GoldSkulls:
+		return "gold-skulls"
+	case BlueSkulls:
+		return "blue-skulls"
+	case GoldChecks:
+		return "gold-checks"
+	case BlueChecks:
+		return "blue-checks"
+	}
+	return "unknown-bee"
+}
+
 const (
 	_           Bee = iota
 	GoldQueen       // 1
